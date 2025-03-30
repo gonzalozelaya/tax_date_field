@@ -13,7 +13,6 @@ class ResCompany(models.Model):
         :return: a list of tuples containing the lock dates ordered chronologically.
         
         """
-        _logger.info(f"Tax date lock: {tax_date}")
         self.ensure_one()
         locks = []
     

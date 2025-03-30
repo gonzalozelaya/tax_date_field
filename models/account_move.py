@@ -16,16 +16,20 @@ class AccountMove(models.Model):
         tracking=True,
     )
 
-    @api.depends('invoice_date', 'company_id')
+    @api.depends('invoice_date', 'date', 'company_id')  # Añadir 'date' a los depends
     def _compute_tax_date(self):
         for move in self:
-            if not move.invoice_date:
+            # Primero intentamos con invoice_date, si no existe usamos date
+            source_date = move.invoice_date or move.date
+            if not source_date:
                 if not move.tax_date:
                     move.tax_date = fields.Date.context_today(self)
                 continue
-            accounting_date = move.invoice_date
+                
+            accounting_date = source_date
             if not move.is_sale_document(include_receipts=True):
-                accounting_date = move._get_accounting_date(move.invoice_date, move._affect_tax_report())
+                accounting_date = move._get_accounting_date(source_date, move._affect_tax_report())
+                
             if accounting_date and accounting_date != move.tax_date:
                 move.tax_date = accounting_date
                 # _affect_tax_report may trigger premature recompute of line_ids.date
@@ -50,7 +54,6 @@ class AccountMove(models.Model):
                  accounted on if posted, or False if no lock dates affect this move.
         """
         lock_dates = self._get_violated_lock_dates(invoice_date, has_tax)
-        _logger.info(f"Lock dates: {lock_dates}")
     
         # Si no hay fechas de bloqueo, no hay mensaje
         if not lock_dates:
@@ -59,7 +62,6 @@ class AccountMove(models.Model):
         # Obtiene la última fecha de bloqueo aplicable
         lock_date, lock_type = lock_dates[-1]
     
-        _logger.info(f"Tax date: {self.tax_date}")
     
         # Si el único lock_date es 'impuesto', debe compararse con tax_date
         if lock_type == 'impuesto':
