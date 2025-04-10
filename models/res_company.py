@@ -1,9 +1,21 @@
 from odoo import fields, models, api, _, Command
+from datetime import timedelta, datetime, date
+
 import logging
 
 _logger = logging.getLogger(__name__)
 class ResCompany(models.Model):
     _inherit = "res.company"
+
+    def _get_user_fiscal_lock_date(self):
+        """Get the fiscal lock date for this company depending on the user"""
+        lock_date = max(self.period_lock_date or date.min, self.fiscalyear_lock_date or date.min)
+        #if self.user_has_groups('account.group_account_manager'):
+            #lock_date = self.fiscalyear_lock_date or date.min
+        #if self.parent_id:
+            # We need to use sudo, since we might not have access to a parent company.
+            #lock_date = max(lock_date, self.sudo().parent_id._get_user_fiscal_lock_date())
+        return lock_date
 
     def _get_violated_lock_dates(self, accounting_date, has_tax, tax_date=None):
         """Get all the lock dates affecting the current accounting_date.
