@@ -143,6 +143,8 @@ class AccountMoveLine(models.Model):
     def _check_tax_lock_date(self):
         for line in self.filtered(lambda l: l.move_id.state == 'posted'):
             move = line.move_id
+            if self.env.user.has_group('account.group_account_manager'):
+                continue
             if move.company_id.max_tax_lock_date and move.tax_date <= move.company_id.max_tax_lock_date and line._affect_tax_report():
                 raise UserError(_("La operación ha fallado ya que afectara impuestos que ya han sido bloqueados. "
                                   "Por favor cambie la fecha impositiva o la fecha de bloqueo (%s) para continuar.",
